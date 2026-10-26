@@ -1,6 +1,3 @@
 {
-  "rewrites": [
-    { "source": "/", "destination": "/app/login.html" },
-    { "source": "/(.*)", "destination": "/app/$1" }
-  ]
+  "version": 2
 }

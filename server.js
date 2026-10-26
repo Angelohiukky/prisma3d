@@ -5,7 +5,6 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const PORT = process.env.PORT || 3000;
 const BASE_DIR = path.join(__dirname, 'app');
 
 const MIME_TYPES = {
@@ -24,8 +23,17 @@ const MIME_TYPES = {
 const server = http.createServer((req, res) => {
     // Tratamento de URL
     let safeUrl = req.url.split('?')[0];
-    if (safeUrl === '/' || safeUrl === '') {
-        safeUrl = '/index.html';
+
+    // Se a rota vier com prefixo /app (ex: /app/login.html), normaliza
+    if (safeUrl.startsWith('/app/')) {
+        safeUrl = safeUrl.substring(4);
+    } else if (safeUrl === '/app') {
+        safeUrl = '/';
+    }
+
+    // Rota raiz ou index direciona para login
+    if (safeUrl === '/' || safeUrl === '' || safeUrl === '/index.html') {
+        safeUrl = '/login.html';
     }
 
     // Proteção rigorosa contra path traversal
