@@ -1,0 +1,86 @@
+<div class="header-view">
+    <div class="header-text">
+        <h2><i class="fa-solid fa-sack-dollar" style="color: var(--primary);"></i> Fluxo Financeiro &amp; Lucro Real</h2>
+        <p>Acompanhamento de entradas (Sinais e Pagamentos), deduções de filamento e margem líquida.</p>
+    </div>
+</div>
+
+<!-- Resumo Financeiro da Prisma 3D -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
+            <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <div class="stat-info">
+            <h3>Total Recebido (Pago)</h3>
+            <div class="stat-num" id="fin-total-recebido" style="color: #34d399;">R$ 0,00</div>
+            <div class="stat-sub">dinheiro em caixa</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b;">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+        </div>
+        <div class="stat-info">
+            <h3>A Receber (Pendentes)</h3>
+            <div class="stat-num" id="fin-total-pendente" style="color: #fbbf24;">R$ 0,00</div>
+            <div class="stat-sub">saldo final de entregas</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(239, 68, 68, 0.12); color: #ef4444;">
+            <i class="fa-solid fa-layer-group"></i>
+        </div>
+        <div class="stat-info">
+            <h3>Custo de Filamento</h3>
+            <div class="stat-num" id="fin-total-custo" style="color: #f87171;">R$ 0,00</div>
+            <div class="stat-sub">insumos consumidos</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(139, 92, 246, 0.12); color: #8b5cf6;">
+            <i class="fa-solid fa-coins"></i>
+        </div>
+        <div class="stat-info">
+            <h3>Lucro Líquido Real</h3>
+            <div class="stat-num" id="fin-total-lucro" style="color: #c084fc;">R$ 0,00</div>
+            <div class="stat-sub">Recebido - Custos</div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabela de Lançamentos por Encomenda -->
+<div class="glass-panel">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+        <h3 style="font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-receipt" style="color: var(--primary);"></i>
+            Lançamentos Financeiros por Encomenda
+        </h3>
+    </div>
+
+    <div class="table-responsive">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Projeto / Encomenda</th>
+                    <th>Cliente</th>
+                    <th>Valor Cobrado</th>
+                    <th>Custo de Insumos</th>
+                    <th>Lucro Líquido</th>
+                    <th>Status Pagamento</th>
+                    <th style="text-align: right;">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-financeiro">
+                <tr>
+                    <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                        Nenhum lançamento financeiro registrado ainda.
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

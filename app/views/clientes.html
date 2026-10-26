@@ -1,0 +1,47 @@
+<div class="header-view">
+    <div class="header-text">
+        <h2><i class="fa-solid fa-users" style="color: var(--primary);"></i> Clientes &amp; Entregas</h2>
+        <p>Dados de contato, endereços completos para frete e histórico de encomendas.</p>
+    </div>
+    <div class="header-actions">
+        <button class="btn-cta" onclick="window.PrismaApp.abrirModalNovoCliente()">
+            <i class="fa-solid fa-user-plus"></i> Novo Cliente
+        </button>
+    </div>
+</div>
+
+<!-- Barra de Busca -->
+<div class="glass-panel" style="margin-bottom: 1.5rem; padding: 1rem 1.25rem;">
+    <div style="position: relative;">
+        <input type="text" id="busca-clientes" placeholder="Buscar cliente por nome, WhatsApp, CPF/CNPJ ou cidade..." 
+               style="width: 100%; padding: 10px 14px 10px 38px; background: rgba(30, 41, 59, 0.6); border: 1px solid var(--border); border-radius: var(--radius-md); color: white;"
+               oninput="window.PrismaApp.filtrarClientes()">
+        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 14px; top: 12px; color: var(--text-dim);"></i>
+    </div>
+</div>
+
+<!-- Lista de Clientes -->
+<div class="glass-panel">
+    <div class="table-responsive">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Cliente</th>
+                    <th>Documento</th>
+                    <th>WhatsApp / Contato</th>
+                    <th>Endereço / Cidade</th>
+                    <th>Pedidos Feitos</th>
+                    <th>Total Faturado</th>
+                    <th style="text-align: right;">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-clientes">
+                <tr>
+                    <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                        Nenhum cliente cadastrado ainda.
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

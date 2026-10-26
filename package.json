@@ -1,0 +1,20 @@
+{
+  "name": "prisma3d-studio",
+  "version": "1.0.0",
+  "description": "Sistema de Gestão & Linha de Produção para Estúdio de Impressão 3D",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "prisma3d",
+    "impressao-3d",
+    "producao",
+    "kanban",
+    "gestao"
+  ],
+  "author": "Prisma 3D",
+  "license": "MIT"
+}

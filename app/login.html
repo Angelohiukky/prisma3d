@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Acesso Seguro | Prisma 3D Studio</title>
+    
+    <!-- Hardening de Cache e Frame -->
+    <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'none';">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+    
+    <!-- Fontes & Ícones -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <link rel="stylesheet" href="css/auth.css">
+</head>
+<body>
+
+    <div class="login-card">
+        <div class="logo-area">
+            <img src="assets/logo.svg" alt="Prisma 3D Studio">
+            <p>Sistema de Gestão &amp; Linha de Produção</p>
+        </div>
+
+        <div id="error-box" class="error-box">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span id="error-text">Credenciais inválidas</span>
+        </div>
+
+        <form id="login-form">
+            <div class="input-group">
+                <label for="email">E-mail de Acesso</label>
+                <div class="input-wrapper">
+                    <input type="email" id="email" placeholder="seuemail@empresa.com" required autocomplete="username">
+                    <i class="fa-solid fa-envelope"></i>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="password">Senha</label>
+                <div class="input-wrapper">
+                    <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
+                    <i class="fa-solid fa-lock"></i>
+                </div>
+            </div>
+
+            <button type="submit" id="btn-submit" class="btn-submit">
+                <span>Entrar no Sistema</span>
+                <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </form>
+
+        <div class="card-footer">
+            <p><i class="fa-solid fa-shield-halved"></i> Acesso restrito e criptografado · Prisma 3D</p>
+        </div>
+    </div>
+
+    <!-- Script de Autenticação -->
+    <script type="module">
+        import { auth, signInWithEmailAndPassword, onAuthStateChanged } from './js/firebase-config.js';
+
+        // Se já estiver logado, redireciona direto para a dashboard
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                window.location.href = 'dashboard.html';
+            }
+        });
+
+        const loginForm = document.getElementById('login-form');
+        const btnSubmit = document.getElementById('btn-submit');
+        const errorBox = document.getElementById('error-box');
+        const errorText = document.getElementById('error-text');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<span>Verificando...</span> <i class="fa-solid fa-circle-notch fa-spin"></i>';
+            errorBox.style.display = 'none';
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                window.location.href = 'dashboard.html';
+            } catch (error) {
+                console.error("Erro auth:", error);
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = '<span>Entrar no Sistema</span> <i class="fa-solid fa-arrow-right"></i>';
+                errorBox.style.display = 'flex';
+
+                switch (error.code) {
+                    case 'auth/invalid-credential':
+                    case 'auth/user-not-found':
+                    case 'auth/wrong-password':
+                        errorText.textContent = 'E-mail ou senha incorretos.';
+                        break;
+                    case 'auth/too-many-requests':
+                        errorText.textContent = 'Muitas tentativas. Aguarde alguns instantes.';
+                        break;
+                    default:
+                        errorText.textContent = 'Erro ao autenticar. Verifique sua conexão.';
+                }
+            }
+        });
+    </script>
+</body>
+</html>

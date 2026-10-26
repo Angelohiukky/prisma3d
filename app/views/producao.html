@@ -1,0 +1,97 @@
+<div class="header-view">
+    <div class="header-text">
+        <h2><i class="fa-solid fa-layer-group" style="color: var(--primary);"></i> Linha de Produção 3D</h2>
+        <p>Acompanhe cada etapa da peça, controle tempos de fatiador e ajuste prazos com histórico.</p>
+    </div>
+    <div class="header-actions">
+        <button class="btn-cta" onclick="window.PrismaApp.abrirModalNovoPedido()">
+            <i class="fa-solid fa-plus"></i> Novo Pedido 3D
+        </button>
+    </div>
+</div>
+
+<!-- Barra de Filtros e Busca -->
+<div class="glass-panel" style="margin-bottom: 1.5rem; padding: 1rem 1.25rem;">
+    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 240px; position: relative;">
+            <input type="text" id="busca-producao" placeholder="Buscar por peça, cliente ou material..." 
+                   style="width: 100%; padding: 10px 14px 10px 38px; background: rgba(30, 41, 59, 0.6); border: 1px solid var(--border); border-radius: var(--radius-md); color: white;"
+                   oninput="window.PrismaApp.filtrarKanban()">
+            <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 14px; top: 12px; color: var(--text-dim);"></i>
+        </div>
+
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500;">FILTRAR PRAZO:</span>
+            <button class="btn-secondary" id="filtro-todos" onclick="window.PrismaApp.setFiltroPrazo('todos')" style="padding: 6px 12px; font-size: 0.8rem; border-color: var(--primary); color: var(--primary);">
+                Todos
+            </button>
+            <button class="btn-secondary" id="filtro-urgente" onclick="window.PrismaApp.setFiltroPrazo('urgente')" style="padding: 6px 12px; font-size: 0.8rem;">
+                <i class="fa-solid fa-circle" style="color: #f59e0b; font-size: 0.65rem;"></i> Vence em 48h
+            </button>
+            <button class="btn-secondary" id="filtro-atrasado" onclick="window.PrismaApp.setFiltroPrazo('atrasado')" style="padding: 6px 12px; font-size: 0.8rem;">
+                <i class="fa-solid fa-circle" style="color: #ef4444; font-size: 0.65rem;"></i> Atrasados
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- KANBAN SCROLLÁVEL COM AS 6 FASES -->
+<div class="kanban-wrapper">
+    <div class="kanban-board">
+        
+        <!-- 1. Orçamento & STL -->
+        <div class="kanban-col">
+            <div class="kanban-col-header orcamento">
+                <span><i class="fa-solid fa-file-code"></i> 1. Orçamento / STL</span>
+                <span class="kanban-count" id="count-orcamento">0</span>
+            </div>
+            <div class="kanban-cards" id="col-orcamento"></div>
+        </div>
+
+        <!-- 2. Fila de Espera -->
+        <div class="kanban-col">
+            <div class="kanban-col-header fila">
+                <span><i class="fa-solid fa-hourglass-start"></i> 2. Na Fila</span>
+                <span class="kanban-count" id="count-fila">0</span>
+            </div>
+            <div class="kanban-cards" id="col-fila"></div>
+        </div>
+
+        <!-- 3. Imprimindo -->
+        <div class="kanban-col">
+            <div class="kanban-col-header imprimindo">
+                <span><i class="fa-solid fa-print"></i> 3. Imprimindo</span>
+                <span class="kanban-count" id="count-imprimindo">0</span>
+            </div>
+            <div class="kanban-cards" id="col-imprimindo"></div>
+        </div>
+
+        <!-- 4. Pós-Processamento -->
+        <div class="kanban-col">
+            <div class="kanban-col-header pos">
+                <span><i class="fa-solid fa-wand-magic-sparkles"></i> 4. Acabamento</span>
+                <span class="kanban-count" id="count-pos">0</span>
+            </div>
+            <div class="kanban-cards" id="col-pos"></div>
+        </div>
+
+        <!-- 5. Pronto para Envio / Retirada -->
+        <div class="kanban-col">
+            <div class="kanban-col-header pronto">
+                <span><i class="fa-solid fa-box-check"></i> 5. Pronto / Envio</span>
+                <span class="kanban-count" id="count-pronto">0</span>
+            </div>
+            <div class="kanban-cards" id="col-pronto"></div>
+        </div>
+
+        <!-- 6. Entregue / Finalizado -->
+        <div class="kanban-col">
+            <div class="kanban-col-header entregue">
+                <span><i class="fa-solid fa-circle-check"></i> 6. Entregue</span>
+                <span class="kanban-count" id="count-entregue">0</span>
+            </div>
+            <div class="kanban-cards" id="col-entregue"></div>
+        </div>
+
+    </div>
+</div>

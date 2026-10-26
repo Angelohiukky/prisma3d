@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Painel de Controle | Prisma 3D Studio</title>
+    
+    <!-- Hardening -->
+    <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'none';">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+    
+    <!-- Fontes & Ícones -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body style="display: none;">
+
+    <!-- Overlay para fechar sidebar no mobile -->
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="window.PrismaApp.toggleSidebar()"></div>
+
+    <!-- Barra Lateral -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-logo">
+            <img src="assets/logo.svg" alt="Prisma 3D Studio">
+        </div>
+
+        <nav class="nav-menu">
+            <a href="#" class="nav-link active" data-view="home" onclick="window.PrismaApp.navegarPara('home')">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>Visão Geral</span>
+            </a>
+            <a href="#" class="nav-link" data-view="producao" onclick="window.PrismaApp.navegarPara('producao')">
+                <i class="fa-solid fa-layer-group"></i>
+                <span>Produção &amp; Prazos</span>
+            </a>
+            <a href="#" class="nav-link" data-view="clientes" onclick="window.PrismaApp.navegarPara('clientes')">
+                <i class="fa-solid fa-users"></i>
+                <span>Clientes &amp; Frete</span>
+            </a>
+            <a href="#" class="nav-link" data-view="insumos" onclick="window.PrismaApp.navegarPara('insumos')">
+                <i class="fa-solid fa-spool"></i>
+                <span>Insumos &amp; Custos</span>
+            </a>
+            <a href="#" class="nav-link" data-view="financeiro" onclick="window.PrismaApp.navegarPara('financeiro')">
+                <i class="fa-solid fa-sack-dollar"></i>
+                <span>Financeiro &amp; Lucro</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-pill">
+                <div class="user-avatar" id="user-avatar">P</div>
+                <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    <div id="welcome-msg" style="color: white; font-weight: 500;">Prisma 3D</div>
+                    <span style="font-size: 0.72rem; color: #06b6d4;">Oficina Ativa</span>
+                </div>
+            </div>
+            <a href="#" id="btn-logout" class="btn-logout">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                <span>Sair do Sistema</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Botão de Menu Mobile -->
+    <div class="mobile-menu-btn" onclick="window.PrismaApp.toggleSidebar()">
+        <i class="fa-solid fa-bars"></i>
+    </div>
+
+    <!-- Conteúdo Principal Dinâmico -->
+    <main class="main-content" id="main-view">
+        <div style="display: flex; align-items: center; justify-content: center; height: 60vh; color: var(--text-muted); gap: 10px;">
+            <i class="fa-solid fa-circle-notch fa-spin fa-2x" style="color: var(--primary);"></i>
+            <span>Carregando Prisma 3D...</span>
+        </div>
+    </main>
+
+    <!-- ==========================================================================
+         MODAL: NOVO / EDITAR PEDIDO 3D
+         ========================================================================== -->
+    <div class="modal-overlay" id="modal-pedido">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modal-pedido-titulo"><i class="fa-solid fa-cube" style="color: var(--primary);"></i> Novo Pedido 3D</h3>
+                <button class="btn-icon" onclick="window.PrismaApp.fecharModal('modal-pedido')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form id="form-pedido" onsubmit="window.PrismaApp.salvarPedido(event)">
+                <input type="hidden" id="pedido-id">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Título do Projeto / Nome da Peça *</label>
+                        <input type="text" id="pedido-titulo" placeholder="Ex: Action Figure Batman 20cm / Suporte Headset" required>
+                    </div>
+
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label>Cliente Associado *</label>
+                            <select id="pedido-cliente" required>
+                                <option value="">Selecione o cliente...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Material / Filamento *</label>
+                            <select id="pedido-material" required onchange="window.PrismaApp.atualizarCalculoCustoModal()">
+                                <option value="">Selecione o material...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label>Peso Fatiador (Gramas) *</label>
+                            <input type="number" id="pedido-peso" placeholder="Ex: 120" min="1" step="0.1" required oninput="window.PrismaApp.atualizarCalculoCustoModal()">
+                        </div>
+                        <div class="form-group">
+                            <label>Tempo Estimado Máquina (Horas) *</label>
+                            <input type="number" id="pedido-tempo" placeholder="Ex: 5.5" min="0.1" step="0.1" required>
+                        </div>
+                    </div>
+
+                    <!-- Caixa com custo de material calculado -->
+                    <div class="calc-box">
+                        <span class="calc-box-title"><i class="fa-solid fa-calculator"></i> Custo Estimado de Filamento:</span>
+                        <span class="calc-box-val" id="pedido-custo-calculado">R$ 0,00</span>
+                    </div>
+
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label>Etapa na Produção *</label>
+                            <select id="pedido-status" required>
+                                <option value="orcamento">1. Orçamento / Análise STL</option>
+                                <option value="fila" selected>2. Na Fila de Espera</option>
+                                <option value="imprimindo">3. Imprimindo</option>
+                                <option value="pos">4. Acabamento / Pós-Processo</option>
+                                <option value="pronto">5. Pronto para Envio</option>
+                                <option value="entregue">6. Concluído / Entregue</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Prazo Prometido de Entrega *</label>
+                            <input type="date" id="pedido-prazo" required>
+                        </div>
+                    </div>
+
+                    <!-- Prazos Flexíveis: Ajuste de Prazo -->
+                    <div style="background: rgba(245, 158, 11, 0.05); border: 1px dashed rgba(245, 158, 11, 0.3); border-radius: var(--radius-md); padding: 12px; margin-bottom: 1.15rem;">
+                        <span style="font-size: 0.78rem; font-weight: 600; color: #f59e0b; display: block; margin-bottom: 8px;">
+                            <i class="fa-solid fa-arrows-rotate"></i> Ajuste Dinâmico de Prazo (Se houver alteração)
+                        </span>
+                        <div class="form-grid-2">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Novo Prazo Revisado:</label>
+                                <input type="date" id="pedido-prazo-ajustado">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Motivo do Ajuste:</label>
+                                <input type="text" id="pedido-motivo-ajuste" placeholder="Ex: Falha na camada, aguardo aprovação">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label>Valor Total Cobrado (R$) *</label>
+                            <input type="number" id="pedido-valor" placeholder="Ex: 180.00" min="0" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Sinal / Valor Já Pago (R$)</label>
+                            <input type="number" id="pedido-sinal" placeholder="Ex: 90.00" min="0" step="0.01" value="0">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Status do Pagamento</label>
+                        <select id="pedido-status-pagamento">
+                            <option value="pendente">Pendente (Nenhum valor pago)</option>
+                            <option value="sinal_pago">Sinal Pago (Entrada)</option>
+                            <option value="pago_total">100% Pago / Quitado</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Observações / Parâmetros Técnicos (Bocal, Infill, Cor)</label>
+                        <textarea id="pedido-obs" rows="2" placeholder="Ex: Bico 0.4mm, Infill 15% Gyroid, acabamento acetinado..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="window.PrismaApp.fecharModal('modal-pedido')">Cancelar</button>
+                    <button type="submit" class="btn-cta" id="btn-salvar-pedido">Salvar Pedido</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+         MODAL: NOVO / EDITAR CLIENTE
+         ========================================================================== -->
+    <div class="modal-overlay" id="modal-cliente">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modal-cliente-titulo"><i class="fa-solid fa-user-plus" style="color: var(--primary);"></i> Cadastro de Cliente</h3>
+                <button class="btn-icon" onclick="window.PrismaApp.fecharModal('modal-cliente')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form id="form-cliente" onsubmit="window.PrismaApp.salvarCliente(event)">
+                <input type="hidden" id="cliente-id">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Nome Completo / Razão Social *</label>
+                        <input type="text" id="cliente-nome" placeholder="Ex: Carlos Eduardo / Studio Geek" required>
+                    </div>
+
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label>WhatsApp (com DDD) *</label>
+                            <input type="tel" id="cliente-whatsapp" placeholder="Ex: 11999998888" required>
+                        </div>
+                        <div class="form-group">
+                            <label>CPF ou CNPJ</label>
+                            <input type="text" id="cliente-cpf" placeholder="Ex: 123.456.789-00">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>E-mail de Contato</label>
+                        <input type="email" id="cliente-email" placeholder="cliente@email.com">
+                    </div>
+
+                    <div style="border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 0.5rem; margin-bottom: 0.5rem;">
+                        <span style="font-size: 0.8rem; font-weight: 600; color: var(--primary); display: block; margin-bottom: 8px;">
+                            <i class="fa-solid fa-truck-fast"></i> Endereço para Frete / Entrega
+                        </span>
+                        
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label>CEP (Busca Automática)</label>
+                                <input type="text" id="cliente-cep" placeholder="00000-000" maxlength="9" onblur="window.PrismaApp.buscarCep(this.value)">
+                            </div>
+                            <div class="form-group">
+                                <label>Cidade / UF</label>
+                                <input type="text" id="cliente-cidade-uf" placeholder="Ex: São Paulo / SP">
+                            </div>
+                        </div>
+
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label>Logradouro / Rua</label>
+                                <input type="text" id="cliente-logradouro" placeholder="Ex: Av. Paulista">
+                            </div>
+                            <div class="form-group">
+                                <label>Número &amp; Complemento</label>
+                                <input type="text" id="cliente-numero" placeholder="Ex: 1000, Apto 42">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Observações / Preferências</label>
+                        <textarea id="cliente-obs" rows="2" placeholder="Ex: Prefere envio por Sedex, retirar na oficina, etc."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="window.PrismaApp.fecharModal('modal-cliente')">Cancelar</button>
+                    <button type="submit" class="btn-cta" id="btn-salvar-cliente">Salvar Cliente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+         MODAL: NOVO / EDITAR INSUMO OU FILAMENTO
+         ========================================================================== -->
+    <div class="modal-overlay" id="modal-insumo">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modal-insumo-titulo"><i class="fa-solid fa-spool" style="color: var(--primary);"></i> Cadastrar Material / Bobina</h3>
+                <button class="btn-icon" onclick="window.PrismaApp.fecharModal('modal-insumo')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form id="form-insumo" onsubmit="window.PrismaApp.salvarInsumo(event)">
+                <input type="hidden" id="insumo-id">
+                <div class="modal-body">
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label>Tipo de Material *</label>
+                            <select id="insumo-tipo" required>
+                                <option value="PLA">PLA</option>
+                                <option value="PLA Silk">PLA Silk</option>
+                                <option value="PETG">PETG</option>
+                                <option value="ABS">ABS</option>
+                                <option value="ASA">ASA</option>
+                                <option value="TPU Flexível">TPU (Flexível)</option>
+                                <option value="Resina Standard">Resina Standard (UV)</option>
+                                <option value="Resina Tough">Resina Tough / ABS-Like</option>
+                                <option value="Outro Insumo">Outro (Embalagem, Parafuso)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Marca / Fabricante *</label>
+                            <input type="text" id="insumo-marca" placeholder="Ex: 3D Fila, Voolt3D, Creality" required>
+                        </div>
+                    </div>
+
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label>Cor do Material *</label>
+                            <input type="text" id="insumo-cor" placeholder="Ex: Preto Fosco, Cinza Espacial" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Amostra Visual da Cor</label>
+                            <input type="color" id="insumo-cor-hex" value="#06b6d4" style="height: 42px; padding: 4px; cursor: pointer;">
+                        </div>
+                    </div>
+
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label>Peso Total da Bobina (Gramas) *</label>
+                            <input type="number" id="insumo-peso-total" value="1000" min="1" required oninput="window.PrismaApp.calcularCustoGramaModal()">
+                        </div>
+                        <div class="form-group">
+                            <label>Custo da Bobina (R$) *</label>
+                            <input type="number" id="insumo-custo" placeholder="Ex: 110.00" min="1" step="0.01" required oninput="window.PrismaApp.calcularCustoGramaModal()">
+                        </div>
+                    </div>
+
+                    <!-- Caixa com custo por grama automático -->
+                    <div class="calc-box">
+                        <span class="calc-box-title"><i class="fa-solid fa-coins"></i> Custo Real por Grama:</span>
+                        <span class="calc-box-val" id="insumo-custo-grama-calc">R$ 0,11 / g</span>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Estoque Restante Estimado (Gramas) *</label>
+                        <input type="number" id="insumo-estoque" placeholder="Ex: 850" min="0" step="1" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="window.PrismaApp.fecharModal('modal-insumo')">Cancelar</button>
+                    <button type="submit" class="btn-cta" id="btn-salvar-insumo">Salvar Material</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Container de Toasts / Notificações -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Script Principal da Aplicação -->
+    <script type="module" src="js/dashboard.js"></script>
+</body>
+</html>

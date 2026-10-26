@@ -1,0 +1,98 @@
+<div class="header-view">
+    <div class="header-text">
+        <h2><i class="fa-solid fa-spool" style="color: var(--primary);"></i> Insumos &amp; Filamentos 3D</h2>
+        <p>Controle de carretéis, resinas, custos automáticos por grama e calculadora rápida.</p>
+    </div>
+    <div class="header-actions">
+        <button class="btn-cta" onclick="window.PrismaApp.abrirModalNovoInsumo()">
+            <i class="fa-solid fa-plus"></i> Novo Material / Bobina
+        </button>
+    </div>
+</div>
+
+<!-- Calculadora Rápida de Custo de Fatiamento -->
+<div class="glass-panel" style="margin-bottom: 2rem; border-color: var(--border-highlight);">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 8px;">
+        <h3 style="font-size: 1rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-calculator" style="color: var(--primary);"></i>
+            Calculadora Instantânea de Fatiador
+        </h3>
+        <span style="font-size: 0.78rem; color: var(--text-muted);">Descubra o custo de filamento e margem antes de fechar com o cliente</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; align-items: flex-end;">
+        <div class="form-group" style="margin-bottom: 0;">
+            <label>Filamento / Resina:</label>
+            <select id="calc-material" onchange="window.PrismaApp.calcularCustoPeca()">
+                <option value="">Selecione um material...</option>
+            </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+            <label>Peso do Fatiador (Gramas):</label>
+            <input type="number" id="calc-peso" placeholder="Ex: 150" min="1" step="0.1" oninput="window.PrismaApp.calcularCustoPeca()">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+            <label>Tempo de Impressão (Horas):</label>
+            <input type="number" id="calc-tempo" placeholder="Ex: 6.5" min="0.1" step="0.1" oninput="window.PrismaApp.calcularCustoPeca()">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+            <label>Margem Desejada:</label>
+            <select id="calc-margem" onchange="window.PrismaApp.calcularCustoPeca()">
+                <option value="2">2x (100% de Lucro)</option>
+                <option value="3" selected>3x (Padrão 3D)</option>
+                <option value="4">4x (Peça Complexa)</option>
+            </select>
+        </div>
+    </div>
+
+    <div style="display: flex; gap: 1.5rem; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border); flex-wrap: wrap;">
+        <div>
+            <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">Custo do Material:</span>
+            <strong id="calc-resultado-custo" style="font-size: 1.2rem; color: #ef4444;">R$ 0,00</strong>
+        </div>
+        <div>
+            <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">Custo Estimado Energia/Desgaste:</span>
+            <strong id="calc-resultado-energia" style="font-size: 1.2rem; color: #f59e0b;">R$ 0,00</strong>
+        </div>
+        <div>
+            <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">Preço Mínimo Sugerido:</span>
+            <strong id="calc-resultado-sugerido" style="font-size: 1.2rem; color: var(--primary);">R$ 0,00</strong>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Materiais e Insumos Cadastrados -->
+<div class="glass-panel">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+        <h3 style="font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-boxes-stacked" style="color: var(--accent);"></i>
+            Estoque de Carretéis e Consumíveis
+        </h3>
+    </div>
+
+    <div class="table-responsive">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Material</th>
+                    <th>Cor &amp; Marca</th>
+                    <th>Custo Bobina (1kg)</th>
+                    <th>Custo por Grama</th>
+                    <th>Estoque Restante</th>
+                    <th>Status</th>
+                    <th style="text-align: right;">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-insumos">
+                <tr>
+                    <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                        Nenhum insumo cadastrado ainda.
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
