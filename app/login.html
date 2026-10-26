@@ -101,8 +101,11 @@
                     case 'auth/too-many-requests':
                         errorText.textContent = 'Muitas tentativas. Aguarde alguns instantes.';
                         break;
+                    case 'auth/unauthorized-domain':
+                        errorText.textContent = 'Domínio da Vercel não autorizado. Adicione-o no painel do Firebase (Authentication > Settings > Authorized domains).';
+                        break;
                     default:
-                        errorText.textContent = 'Erro ao autenticar. Verifique sua conexão.';
+                        errorText.textContent = 'Erro ao autenticar: ' + (error.message || 'Verifique sua conexão.');
                 }
             }
         });

@@ -2,17 +2,10 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="0; url=login.html">
     <title>Prisma 3D Studio</title>
-    <script type="module">
-        import { auth, onAuthStateChanged } from './js/firebase-config.js';
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                window.location.replace('dashboard.html');
-            } else {
-                window.location.replace('login.html');
-            }
-        });
+    <script>
+        window.location.replace("login.html");
     </script>
     <style>
         body {
@@ -28,6 +21,6 @@
     </style>
 </head>
 <body>
-    <p>Carregando Prisma 3D...</p>
+    <p>Iniciando Prisma 3D...</p>
 </body>
 </html>
