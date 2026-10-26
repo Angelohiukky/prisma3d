@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 70" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 270 70" fill="none">
   <defs>
     <linearGradient id="prismGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#06b6d4" />
@@ -19,7 +19,7 @@
   </defs>
 
   <!-- 3D Isometric Prism Icon with Layer Lines -->
-  <g transform="translate(15, 8)">
+  <g transform="translate(12, 8)">
     <!-- Base Layer -->
     <path d="M26 4 L48 16 L26 28 L4 16 Z" fill="url(#prismGrad)" opacity="0.3"/>
     <!-- Middle Layer Lines (3D Print Slices) -->
@@ -38,10 +38,10 @@
   </g>
 
   <!-- Typography -->
-  <text x="80" y="38" font-family="'Syne', 'Inter', sans-serif" font-weight="800" font-size="28" fill="#ffffff" letter-spacing="1.5">
+  <text x="76" y="38" font-family="'Syne', 'Inter', sans-serif" font-weight="800" font-size="28" fill="#ffffff" letter-spacing="1">
     PRISMA<tspan fill="#06b6d4" font-weight="900">3D</tspan>
   </text>
-  <text x="82" y="52" font-family="'Inter', sans-serif" font-weight="500" font-size="9" fill="#94a3b8" letter-spacing="3.5">
+  <text x="78" y="52" font-family="'Inter', sans-serif" font-weight="500" font-size="9" fill="#94a3b8" letter-spacing="3.5">
     STUDIO &amp; PRODUÇÃO
   </text>
 </svg>
