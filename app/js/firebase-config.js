@@ -41,7 +41,8 @@ export const COLS = {
     PEDIDOS: 'prisma_pedidos',
     CLIENTES: 'prisma_clientes',
     INSUMOS: 'prisma_insumos',
-    PAGAMENTOS: 'prisma_pagamentos'
+    PAGAMENTOS: 'prisma_pagamentos',
+    NOTAS: 'prisma_notas'
 };
 
 export {

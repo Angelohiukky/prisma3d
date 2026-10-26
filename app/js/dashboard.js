@@ -18,9 +18,12 @@ window.PrismaState = {
     pedidos: [],
     clientes: [],
     insumos: [],
+    notas: [],
     filtroPrazo: 'todos',
     termoBuscaKanban: '',
-    termoBuscaClientes: ''
+    termoBuscaClientes: '',
+    filtroCategoriaNota: 'todas',
+    termoBuscaNotas: ''
 };
 
 // ==========================================================================
@@ -86,6 +89,18 @@ function iniciarRealtimeListeners() {
         atualizarSelectsMateriais();
         renderizarViewAtual();
     });
+
+    // Escuta Mural de Notas & Informações
+    onSnapshot(collection(db, COLS.NOTAS), (snapshot) => {
+        window.PrismaState.notas = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+        renderizarViewAtual();
+    }, (error) => {
+        console.error("Erro ao escutar notas do mural:", error);
+        mostrarToast("Erro de sincronização do mural de notas", "error");
+    });
 }
 
 // ==========================================================================
@@ -150,6 +165,9 @@ function renderizarViewAtual() {
         case 'financeiro':
             renderizarFinanceiro();
             break;
+        case 'mural':
+            renderizarMural();
+            break;
     }
 }
 
@@ -209,6 +227,63 @@ function renderizarHome() {
 
     // Tabela Fila Prioritária
     renderizarFilaPrioritaria(pedidosAtivos);
+
+    // Notas Fixadas da Oficina
+    renderizarNotasFixadasHome();
+}
+
+function renderizarNotasFixadasHome() {
+    const container = document.getElementById('home-notas-fixadas');
+    if (!container) return;
+
+    const notas = window.PrismaState.notas || [];
+    // Prioriza as fixadas; se não houver fixadas, exibe as 3 mais recentes
+    let notasDestaque = notas.filter(n => n.fixada);
+    if (notasDestaque.length === 0) {
+        notasDestaque = [...notas].sort((a, b) => {
+            const dataA = a.updated_at?.seconds || a.created_at?.seconds || 0;
+            const dataB = b.updated_at?.seconds || b.created_at?.seconds || 0;
+            return dataB - dataA;
+        }).slice(0, 3);
+    }
+
+    if (notasDestaque.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 1.5rem; color: var(--text-muted); font-size: 0.9rem; grid-column: 1 / -1;">
+                <i class="fa-solid fa-note-sticky" style="color: var(--primary); font-size: 1.5rem; margin-bottom: 0.5rem; display: block; opacity: 0.7;"></i>
+                Nenhuma anotação registrada ainda. Registre lembretes e parâmetros no Mural de Notas.
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = notasDestaque.map(nota => {
+        const catInfo = obterInfoCategoria(nota.categoria);
+        const corClasse = `mural-card-${nota.cor || 'padrao'}`;
+        const isPinned = nota.fixada ? 'is-pinned' : '';
+        const dataFormatada = formatarDataTimestamp(nota.updated_at || nota.created_at);
+
+        return `
+            <div class="mural-card ${corClasse} ${isPinned}" style="padding: 1.1rem; gap: 0.6rem;">
+                <div class="mural-card-header">
+                    <span class="mural-categoria-badge" style="font-size: 0.68rem;">
+                        <i class="${catInfo.icone}" style="color: ${catInfo.cor};"></i> ${escapeHtml(catInfo.label)}
+                    </span>
+                    ${nota.fixada ? '<span style="color: #f59e0b; font-size: 0.75rem;" title="Nota Fixada"><i class="fa-solid fa-thumbtack"></i></span>' : ''}
+                </div>
+                <h4 class="mural-card-titulo" style="font-size: 0.95rem;">${escapeHtml(nota.titulo)}</h4>
+                <div class="mural-card-body" style="font-size: 0.82rem; max-height: 120px;">${escapeHtml(nota.conteudo)}</div>
+                <div class="mural-card-footer" style="padding-top: 0.5rem;">
+                    <span class="mural-card-data" style="font-size: 0.7rem;">
+                        <i class="fa-regular fa-clock"></i> ${dataFormatada}
+                    </span>
+                    <button class="btn-secondary" onclick="window.PrismaApp.abrirModalEditarNota('${nota.id}')" style="font-size: 0.72rem; padding: 3px 8px;">
+                        Editar
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 function renderizarAlertasPrazos(pedidosAtivos) {
@@ -1036,6 +1111,250 @@ async function excluirInsumo(id) {
 }
 
 // ==========================================================================
+// RENDERIZAÇÃO E OPERAÇÕES: MURAL DE NOTAS & INFORMAÇÕES
+// ==========================================================================
+function renderizarMural() {
+    const grid = document.getElementById('grid-mural-notas');
+    if (!grid) return;
+
+    const notas = window.PrismaState.notas || [];
+    const catFiltro = window.PrismaState.filtroCategoriaNota || 'todas';
+    const termo = (window.PrismaState.termoBuscaNotas || '').toLowerCase();
+
+    // Atualiza contadores de notas
+    const elTotal = document.getElementById('mural-total-notas');
+    const elFixadas = document.getElementById('mural-total-fixadas');
+    if (elTotal) elTotal.textContent = notas.length;
+    if (elFixadas) elFixadas.textContent = notas.filter(n => n.fixada).length;
+
+    // Filtra notas por categoria e busca textual
+    let notasFiltradas = notas.filter(n => {
+        if (catFiltro === 'fixadas' && !n.fixada) return false;
+        if (catFiltro !== 'todas' && catFiltro !== 'fixadas' && n.categoria !== catFiltro) return false;
+
+        if (termo) {
+            const titulo = (n.titulo || '').toLowerCase();
+            const conteudo = (n.conteudo || '').toLowerCase();
+            const tags = (n.tags || '').toLowerCase();
+            const cat = (n.categoria || '').toLowerCase();
+            return titulo.includes(termo) || conteudo.includes(termo) || tags.includes(termo) || cat.includes(termo);
+        }
+
+        return true;
+    });
+
+    // Ordenação: primeiro fixadas, depois por updated_at / created_at mais recente
+    notasFiltradas.sort((a, b) => {
+        if (a.fixada !== b.fixada) {
+            return a.fixada ? -1 : 1;
+        }
+        const dataA = a.updated_at?.seconds || a.created_at?.seconds || 0;
+        const dataB = b.updated_at?.seconds || b.created_at?.seconds || 0;
+        return dataB - dataA;
+    });
+
+    if (notasFiltradas.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 3.5rem 1.5rem; background: var(--card-bg); border: 1px dashed var(--border); border-radius: var(--radius-lg);">
+                <i class="fa-solid fa-note-sticky" style="color: var(--primary); font-size: 2.2rem; margin-bottom: 0.75rem; display: block; opacity: 0.8;"></i>
+                <h4 style="color: white; font-size: 1.1rem; margin-bottom: 0.35rem;">Nenhuma nota encontrada</h4>
+                <p style="color: var(--text-muted); font-size: 0.88rem; max-width: 440px; margin: 0 auto 1.25rem;">
+                    ${termo || catFiltro !== 'todas' 
+                        ? 'Nenhuma anotação corresponde ao filtro ou busca selecionada.' 
+                        : 'Utilize o mural para registrar parâmetros de impressão, testes de filamentos, manutenções periódicas e lembretes da oficina.'}
+                </p>
+                <button class="btn-cta" onclick="window.PrismaApp.abrirModalNovaNota()">
+                    <i class="fa-solid fa-plus"></i> Criar Primeira Nota
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    grid.innerHTML = notasFiltradas.map(nota => {
+        const catInfo = obterInfoCategoria(nota.categoria);
+        const corClasse = `mural-card-${nota.cor || 'padrao'}`;
+        const isPinned = nota.fixada ? 'is-pinned' : '';
+        const dataFormatada = formatarDataTimestamp(nota.updated_at || nota.created_at);
+        const tags = nota.tags ? nota.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+        return `
+            <div class="mural-card ${corClasse} ${isPinned}">
+                <div class="mural-card-header">
+                    <span class="mural-categoria-badge">
+                        <i class="${catInfo.icone}" style="color: ${catInfo.cor};"></i> ${escapeHtml(catInfo.label)}
+                    </span>
+                    <button 
+                        class="mural-pin-btn ${nota.fixada ? 'active' : ''}" 
+                        title="${nota.fixada ? 'Desafixar nota do topo' : 'Fixar nota no topo'}"
+                        onclick="window.PrismaApp.toggleFixarNota('${nota.id}')"
+                    >
+                        <i class="fa-solid fa-thumbtack"></i>
+                    </button>
+                </div>
+
+                <h4 class="mural-card-titulo">${escapeHtml(nota.titulo)}</h4>
+
+                <div class="mural-card-body">${escapeHtml(nota.conteudo)}</div>
+
+                ${tags.length > 0 ? `
+                    <div class="mural-tags-container">
+                        ${tags.map(t => `<span class="mural-tag"><i class="fa-solid fa-tag" style="font-size: 0.65rem; opacity: 0.7;"></i> ${escapeHtml(t)}</span>`).join('')}
+                    </div>
+                ` : ''}
+
+                <div class="mural-card-footer">
+                    <span class="mural-card-data">
+                        <i class="fa-regular fa-clock"></i> ${dataFormatada}
+                    </span>
+                    <div class="mural-card-actions">
+                        <button title="Editar Nota" onclick="window.PrismaApp.abrirModalEditarNota('${nota.id}')">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button class="btn-delete" title="Excluir Nota" onclick="window.PrismaApp.excluirNota('${nota.id}')">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function obterInfoCategoria(cat) {
+    const map = {
+        'parametros': { label: 'Parâmetros 3D', icone: 'fa-solid fa-sliders', cor: '#06b6d4' },
+        'manutencao': { label: 'Manutenção', icone: 'fa-solid fa-wrench', cor: '#f59e0b' },
+        'ideias': { label: 'Ideias & Novos Projetos', icone: 'fa-solid fa-lightbulb', cor: '#a855f7' },
+        'urgente': { label: 'Urgente / Alerta', icone: 'fa-solid fa-triangle-exclamation', cor: '#ef4444' },
+        'geral': { label: 'Geral', icone: 'fa-solid fa-comment-dots', cor: '#94a3b8' }
+    };
+    return map[cat] || { label: 'Nota', icone: 'fa-solid fa-note-sticky', cor: '#06b6d4' };
+}
+
+function formatarDataTimestamp(timestamp) {
+    if (!timestamp) return 'Hoje';
+    let date;
+    if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+        date = timestamp.toDate();
+    } else if (timestamp.seconds) {
+        date = new Date(timestamp.seconds * 1000);
+    } else {
+        date = new Date(timestamp);
+    }
+    if (isNaN(date.getTime())) return 'Hoje';
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function filtrarNotasPorCategoria(cat) {
+    window.PrismaState.filtroCategoriaNota = cat;
+    document.querySelectorAll('.mural-pill-filtro').forEach(btn => {
+        if (btn.getAttribute('data-cat') === cat) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    renderizarMural();
+}
+
+function filtrarNotasPorBusca(termo) {
+    window.PrismaState.termoBuscaNotas = (termo || '').toLowerCase().trim();
+    renderizarMural();
+}
+
+function abrirModalNovaNota() {
+    const form = document.getElementById('form-nota');
+    if (form) form.reset();
+    document.getElementById('nota-id').value = '';
+    document.getElementById('modal-nota-titulo').innerHTML = '<i class="fa-solid fa-note-sticky" style="color: var(--primary);"></i> Nova Nota no Mural';
+    document.getElementById('nota-cor').value = 'ciano';
+    document.getElementById('nota-categoria').value = 'geral';
+    document.getElementById('nota-fixada').checked = false;
+    abrirModal('modal-nota');
+}
+
+function abrirModalEditarNota(id) {
+    const nota = window.PrismaState.notas.find(n => n.id === id);
+    if (!nota) return;
+
+    document.getElementById('nota-id').value = nota.id;
+    document.getElementById('modal-nota-titulo').innerHTML = '<i class="fa-solid fa-pen-to-square" style="color: var(--primary);"></i> Editar Nota do Mural';
+    document.getElementById('nota-titulo').value = nota.titulo || '';
+    document.getElementById('nota-categoria').value = nota.categoria || 'geral';
+    document.getElementById('nota-cor').value = nota.cor || 'padrao';
+    document.getElementById('nota-fixada').checked = !!nota.fixada;
+    document.getElementById('nota-conteudo').value = nota.conteudo || '';
+    document.getElementById('nota-tags').value = nota.tags || '';
+
+    abrirModal('modal-nota');
+}
+
+async function salvarNota(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btn-salvar-nota');
+    btn.disabled = true;
+
+    try {
+        const id = document.getElementById('nota-id').value;
+        const data = {
+            titulo: document.getElementById('nota-titulo').value.trim(),
+            categoria: document.getElementById('nota-categoria').value,
+            cor: document.getElementById('nota-cor').value,
+            fixada: document.getElementById('nota-fixada').checked,
+            conteudo: document.getElementById('nota-conteudo').value.trim(),
+            tags: document.getElementById('nota-tags').value.trim(),
+            updated_at: serverTimestamp()
+        };
+
+        if (id) {
+            await updateDoc(doc(db, COLS.NOTAS, id), data);
+            mostrarToast("Nota atualizada com sucesso!", "success");
+        } else {
+            data.created_at = serverTimestamp();
+            await addDoc(collection(db, COLS.NOTAS), data);
+            mostrarToast("Nova nota adicionada ao mural!", "success");
+        }
+
+        fecharModal('modal-nota');
+    } catch (err) {
+        console.error(err);
+        mostrarToast("Erro ao salvar nota.", "error");
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function excluirNota(id) {
+    if (confirm("Tem certeza que deseja excluir esta nota do mural?")) {
+        try {
+            await deleteDoc(doc(db, COLS.NOTAS, id));
+            mostrarToast("Nota removida do mural.", "success");
+        } catch (err) {
+            console.error(err);
+            mostrarToast("Erro ao excluir nota.", "error");
+        }
+    }
+}
+
+async function toggleFixarNota(id) {
+    const nota = window.PrismaState.notas.find(n => n.id === id);
+    if (!nota) return;
+
+    try {
+        const novoStatus = !nota.fixada;
+        await updateDoc(doc(db, COLS.NOTAS, id), {
+            fixada: novoStatus,
+            updated_at: serverTimestamp()
+        });
+        mostrarToast(novoStatus ? "Nota fixada no topo do mural!" : "Nota desafixada.", "success");
+    } catch (err) {
+        console.error(err);
+        mostrarToast("Erro ao alterar fixação da nota.", "error");
+    }
+}
+
+// ==========================================================================
 // HELPERS, DROPDOWNS E FORMATAÇÃO
 // ==========================================================================
 function atualizarSelectsClientes() {
@@ -1173,5 +1492,12 @@ window.PrismaApp = {
     excluirInsumo,
     calcularCustoGramaModal,
     calcularCustoPeca,
-    quitarPagamento
+    quitarPagamento,
+    abrirModalNovaNota,
+    abrirModalEditarNota,
+    salvarNota,
+    excluirNota,
+    toggleFixarNota,
+    filtrarNotasPorCategoria,
+    filtrarNotasPorBusca
 };

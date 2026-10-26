@@ -1,0 +1,67 @@
+<div class="header-view">
+    <div class="header-text">
+        <h2><i class="fa-solid fa-note-sticky" style="color: var(--primary);"></i> Mural de Notas &amp; Informações</h2>
+        <p>Centralize parâmetros de fatiamento, lembretes de bancada, manutenções e avisos da oficina.</p>
+    </div>
+    <div class="header-actions">
+        <button class="btn-cta" onclick="window.PrismaApp.abrirModalNovaNota()">
+            <i class="fa-solid fa-plus"></i> Nova Nota
+        </button>
+    </div>
+</div>
+
+<!-- Barra de Ferramentas: Busca e Filtros de Categoria -->
+<div class="glass-panel" style="margin-bottom: 1.75rem; padding: 1.15rem 1.4rem;">
+    <div style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: center;">
+        <!-- Campo de Pesquisa -->
+        <div style="flex: 1; min-width: 250px; position: relative;">
+            <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 0.9rem;"></i>
+            <input 
+                type="text" 
+                id="busca-notas" 
+                placeholder="Pesquisar por título, texto ou categoria..." 
+                oninput="window.PrismaApp.filtrarNotasPorBusca(this.value)"
+                style="width: 100%; padding: 10px 14px 10px 40px; background: rgba(0, 0, 0, 0.28); border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--text-main); font-size: 0.88rem; outline: none; transition: var(--transition);"
+            >
+        </div>
+
+        <!-- Estatísticas Rápidas -->
+        <div style="display: flex; gap: 1rem; align-items: center; font-size: 0.82rem; color: var(--text-muted);">
+            <div><i class="fa-solid fa-layer-group" style="color: var(--primary);"></i> <span id="mural-total-notas">0</span> notas</div>
+            <div><i class="fa-solid fa-thumbtack" style="color: #f59e0b;"></i> <span id="mural-total-fixadas">0</span> fixadas</div>
+        </div>
+    </div>
+
+    <!-- Tags / Filtros de Categoria -->
+    <div class="mural-filtros-container" style="display: flex; gap: 8px; margin-top: 1rem; flex-wrap: wrap;">
+        <button class="mural-pill-filtro active" data-cat="todas" onclick="window.PrismaApp.filtrarNotasPorCategoria('todas')">
+            <i class="fa-solid fa-border-all"></i> Todas
+        </button>
+        <button class="mural-pill-filtro" data-cat="fixadas" onclick="window.PrismaApp.filtrarNotasPorCategoria('fixadas')">
+            <i class="fa-solid fa-thumbtack"></i> Fixadas
+        </button>
+        <button class="mural-pill-filtro" data-cat="parametros" onclick="window.PrismaApp.filtrarNotasPorCategoria('parametros')">
+            <i class="fa-solid fa-sliders"></i> Parâmetros 3D
+        </button>
+        <button class="mural-pill-filtro" data-cat="manutencao" onclick="window.PrismaApp.filtrarNotasPorCategoria('manutencao')">
+            <i class="fa-solid fa-wrench"></i> Manutenção
+        </button>
+        <button class="mural-pill-filtro" data-cat="ideias" onclick="window.PrismaApp.filtrarNotasPorCategoria('ideias')">
+            <i class="fa-solid fa-lightbulb"></i> Ideias &amp; Projetos
+        </button>
+        <button class="mural-pill-filtro" data-cat="urgente" onclick="window.PrismaApp.filtrarNotasPorCategoria('urgente')">
+            <i class="fa-solid fa-triangle-exclamation"></i> Urgente
+        </button>
+        <button class="mural-pill-filtro" data-cat="geral" onclick="window.PrismaApp.filtrarNotasPorCategoria('geral')">
+            <i class="fa-solid fa-comment-dots"></i> Geral
+        </button>
+    </div>
+</div>
+
+<!-- Grid de Notas do Mural -->
+<div class="mural-grid" id="grid-mural-notas">
+    <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-muted);">
+        <i class="fa-solid fa-circle-notch fa-spin fa-2x" style="color: var(--primary); margin-bottom: 10px; display: block;"></i>
+        <span>Carregando mural de notas...</span>
+    </div>
+</div>

@@ -32,7 +32,14 @@ Sistema web moderno, responsivo e seguro desenvolvido sob medida para a **Prisma
    - Dedução direta do custo de filamento e energia consumida.
    - Cálculo do **Lucro Líquido Real** por peça e no acumulado do mês.
 
-5. **Segurança com Senha & Nuvem Realtime**:
+5. **Mural de Notas & Informações da Oficina**:
+   - Registro de parâmetros técnicos de fatiador (temperaturas, retração, velocidades).
+   - Lembretes de manutenção periódica de impressoras 3D (nivelamento, limpeza, bicos).
+   - Cartões personalizáveis com código de cores e fixação no topo (Pin).
+   - Busca em tempo real e filtros por categoria (*Parâmetros 3D*, *Manutenção*, *Ideias*, *Urgente*, *Geral*).
+   - Widget integrado diretamente na Visão Geral para visualização rápida.
+
+6. **Segurança com Senha & Nuvem Realtime**:
    - Protegido por **Firebase Auth** (Login com e-mail e senha).
    - Banco de dados em tempo real no **Firebase Firestore** (gratuito perpétuo).
 
@@ -84,7 +91,8 @@ Prisma/
 │   │   ├── producao.html     # Kanban 3D com 6 etapas de produção
 │   │   ├── clientes.html     # CRM de clientes e endereços de entrega
 │   │   ├── insumos.html      # Bobinas, estoque e calculadora de fatiador
-│   │   └── financeiro.html   # Fluxo de pagamentos e lucro líquido
+│   │   ├── financeiro.html   # Fluxo de pagamentos e lucro líquido
+│   │   └── mural.html        # Mural de notas, parâmetros e recados da oficina
 │   └── assets/
 │       └── logo.svg          # Logo oficial Prisma 3D Studio
 ├── server.js                 # Servidor local de desenvolvimento sem dependências

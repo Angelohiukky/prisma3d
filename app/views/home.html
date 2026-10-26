@@ -110,3 +110,28 @@
         </table>
     </div>
 </div>
+
+<!-- Painel de Notas & Lembretes da Oficina -->
+<div class="glass-panel" style="margin-top: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 10px;">
+        <h3 style="font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-thumbtack" style="color: #f59e0b;"></i>
+            Mural da Oficina &amp; Notas Fixadas
+        </h3>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="btn-secondary" onclick="window.PrismaApp.abrirModalNovaNota()" style="font-size: 0.8rem; padding: 6px 12px;">
+                <i class="fa-solid fa-plus"></i> Nova Nota
+            </button>
+            <button class="btn-secondary" onclick="window.PrismaApp.navegarPara('mural')" style="font-size: 0.8rem; padding: 6px 12px;">
+                Acessar Mural Completo <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <div id="home-notas-fixadas" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+        <div style="text-align: center; padding: 1.5rem; color: var(--text-muted); font-size: 0.9rem; grid-column: 1 / -1;">
+            <i class="fa-solid fa-note-sticky" style="color: var(--primary); font-size: 1.5rem; margin-bottom: 0.5rem; display: block; opacity: 0.7;"></i>
+            Nenhuma anotação fixada no momento. Registre lembretes e parâmetros no Mural de Notas.
+        </div>
+    </div>
+</div>
