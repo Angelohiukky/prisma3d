@@ -19,11 +19,14 @@ window.PrismaState = {
     clientes: [],
     insumos: [],
     notas: [],
+    orcamentos: [],
     filtroPrazo: 'todos',
     termoBuscaKanban: '',
     termoBuscaClientes: '',
     filtroCategoriaNota: 'todas',
-    termoBuscaNotas: ''
+    termoBuscaNotas: '',
+    filtroStatusOrcamento: 'todos',
+    orcamentoAtualCalculado: null
 };
 
 // ==========================================================================
@@ -101,6 +104,17 @@ function iniciarRealtimeListeners() {
         console.error("Erro ao escutar notas do mural:", error);
         mostrarToast("Erro de sincronização do mural de notas", "error");
     });
+
+    // Escuta Orçamentos 3D
+    onSnapshot(collection(db, COLS.ORCAMENTOS), (snapshot) => {
+        window.PrismaState.orcamentos = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+        renderizarViewAtual();
+    }, (error) => {
+        console.error("Erro ao escutar orçamentos:", error);
+    });
 }
 
 // ==========================================================================
@@ -167,6 +181,9 @@ function renderizarViewAtual() {
             break;
         case 'mural':
             renderizarMural();
+            break;
+        case 'orcamentos':
+            renderizarOrcamentos();
             break;
     }
 }
@@ -1355,6 +1372,583 @@ async function toggleFixarNota(id) {
 }
 
 // ==========================================================================
+// CONFIGURAÇÕES DE CUSTOS DA OFICINA (BASE DE CÁLCULO)
+// ==========================================================================
+const CONFIG_OFICINA_DEFAULT = {
+    tarifaEnergiaKwh: 0.95,
+    potenciaWatts: 180,
+    depreciacaoHora: 2.50,
+    maoObraHora: 30.00,
+    margemPadrao: 2.5
+};
+
+function obterConfigOficina() {
+    try {
+        const salvo = localStorage.getItem('prisma_config_oficina');
+        if (salvo) return { ...CONFIG_OFICINA_DEFAULT, ...JSON.parse(salvo) };
+    } catch (e) {
+        console.error("Erro ao carregar configurações da oficina:", e);
+    }
+    return { ...CONFIG_OFICINA_DEFAULT };
+}
+
+function abrirConfigOficina() {
+    const cfg = obterConfigOficina();
+    const elTarifa = document.getElementById('cfg-tarifa-energia');
+    const elPotencia = document.getElementById('cfg-potencia-watts');
+    const elDeprec = document.getElementById('cfg-depreciacao-hora');
+    const elMaoObra = document.getElementById('cfg-mao-obra-hora');
+    const elMargem = document.getElementById('cfg-margem-padrao');
+
+    if (elTarifa) elTarifa.value = cfg.tarifaEnergiaKwh;
+    if (elPotencia) elPotencia.value = cfg.potenciaWatts;
+    if (elDeprec) elDeprec.value = cfg.depreciacaoHora;
+    if (elMaoObra) elMaoObra.value = cfg.maoObraHora;
+    if (elMargem) elMargem.value = cfg.margemPadrao;
+
+    abrirModal('modal-config-oficina');
+}
+
+function salvarConfigOficina(e) {
+    e.preventDefault();
+    const cfg = {
+        tarifaEnergiaKwh: parseFloat(document.getElementById('cfg-tarifa-energia').value) || CONFIG_OFICINA_DEFAULT.tarifaEnergiaKwh,
+        potenciaWatts: parseFloat(document.getElementById('cfg-potencia-watts').value) || CONFIG_OFICINA_DEFAULT.potenciaWatts,
+        depreciacaoHora: parseFloat(document.getElementById('cfg-depreciacao-hora').value) || CONFIG_OFICINA_DEFAULT.depreciacaoHora,
+        maoObraHora: parseFloat(document.getElementById('cfg-mao-obra-hora').value) || CONFIG_OFICINA_DEFAULT.maoObraHora,
+        margemPadrao: parseFloat(document.getElementById('cfg-margem-padrao').value) || CONFIG_OFICINA_DEFAULT.margemPadrao
+    };
+    try {
+        localStorage.setItem('prisma_config_oficina', JSON.stringify(cfg));
+        mostrarToast("Parâmetros da oficina salvos!", "success");
+        fecharModal('modal-config-oficina');
+        if (window.PrismaState.viewAtual === 'orcamentos') {
+            recalcularOrcamento();
+        }
+    } catch (err) {
+        console.error(err);
+        mostrarToast("Erro ao salvar parâmetros.", "error");
+    }
+}
+
+// ==========================================================================
+// RENDERIZAÇÃO & OPERAÇÕES: CALCULADORA DE ORÇAMENTOS 3D
+// ==========================================================================
+function renderizarOrcamentos() {
+    popularSelectsOrcamento();
+    recalcularOrcamento();
+    renderizarTabelaOrcamentos();
+}
+
+function popularSelectsOrcamento() {
+    // Select de Clientes
+    const selectCliente = document.getElementById('orc-cliente-select');
+    if (selectCliente) {
+        const atual = selectCliente.value;
+        selectCliente.innerHTML = '<option value="">-- Selecione ou digite ao lado --</option>' + 
+            window.PrismaState.clientes.map(c => `<option value="${c.id}">${escapeHtml(c.nome)} (${escapeHtml(c.whatsapp || '')})</option>`).join('');
+        if (atual) selectCliente.value = atual;
+    }
+
+    // Select de Materiais / Insumos
+    const selectMaterial = document.getElementById('orc-material-select');
+    if (selectMaterial) {
+        const atual = selectMaterial.value;
+        selectMaterial.innerHTML = '<option value="">Selecione o filamento...</option>' + 
+            window.PrismaState.insumos.map(m => {
+                const custoGrama = (parseFloat(m.custo_bobina) || 0) / (parseFloat(m.peso_total_gramas) || 1000);
+                return `<option value="${m.id}">${escapeHtml(m.tipo)} - ${escapeHtml(m.cor)} (${formatarMoeda(custoGrama)}/g)</option>`;
+            }).join('');
+        if (atual) {
+            selectMaterial.value = atual;
+        } else if (window.PrismaState.insumos.length > 0) {
+            selectMaterial.selectedIndex = 1;
+        }
+    }
+}
+
+function selecionarClienteOrcamento(clienteId) {
+    if (!clienteId) return;
+    const cliente = window.PrismaState.clientes.find(c => c.id === clienteId);
+    if (!cliente) return;
+
+    const elNome = document.getElementById('orc-cliente-nome');
+    const elWhats = document.getElementById('orc-cliente-whatsapp');
+    if (elNome) elNome.value = cliente.nome || '';
+    if (elWhats) elWhats.value = cliente.whatsapp || '';
+
+    recalcularOrcamento();
+}
+
+function atualizarMargemOrcamento(valor) {
+    const campoManual = document.getElementById('orc-campo-valor-manual');
+    if (campoManual) {
+        campoManual.style.display = valor === 'manual' ? 'block' : 'none';
+    }
+    recalcularOrcamento();
+}
+
+function recalcularOrcamento() {
+    const cfg = obterConfigOficina();
+
+    // Valores de entrada
+    const materialId = document.getElementById('orc-material-select')?.value;
+    const pesoGramas = parseFloat(document.getElementById('orc-peso')?.value) || 0;
+    const tempoHoras = parseFloat(document.getElementById('orc-tempo')?.value) || 0;
+    const taxaRisco = parseFloat(document.getElementById('orc-risco')?.value) || 0;
+    const margemOpt = document.getElementById('orc-margem-multiplicador')?.value || '2.5';
+    const valorManual = parseFloat(document.getElementById('orc-valor-manual')?.value) || 0;
+
+    const clienteNome = document.getElementById('orc-cliente-nome')?.value.trim() || 'Cliente';
+    const clienteWhats = document.getElementById('orc-cliente-whatsapp')?.value.trim() || '';
+    const tituloProjeto = document.getElementById('orc-titulo')?.value.trim() || 'Peça Sob Encomenda';
+    const prazoPrometido = document.getElementById('orc-prazo-dias')?.value.trim() || '3 a 5 dias úteis';
+
+    // Extras
+    let extrasTotal = 0;
+    const listaExtrasDesc = [];
+    if (document.getElementById('orc-extra-suporte')?.checked) {
+        extrasTotal += 15.00;
+        listaExtrasDesc.push('Remoção de Suportes / Limpeza');
+    }
+    if (document.getElementById('orc-extra-lixamento')?.checked) {
+        extrasTotal += 35.00;
+        listaExtrasDesc.push('Lixamento & Primer / Acabamento');
+    }
+    if (document.getElementById('orc-extra-inserts')?.checked) {
+        extrasTotal += 12.00;
+        listaExtrasDesc.push('Inserts Metálicos / Ímãs');
+    }
+    if (document.getElementById('orc-extra-embalagem')?.checked) {
+        extrasTotal += 10.00;
+        listaExtrasDesc.push('Embalagem Especial Reforçada');
+    }
+
+    // Material
+    const materialObj = window.PrismaState.insumos.find(m => m.id === materialId);
+    let custoGrama = 0.11;
+    let materialNome = 'PLA Padrão';
+    if (materialObj) {
+        custoGrama = (parseFloat(materialObj.custo_bobina) || 0) / (parseFloat(materialObj.peso_total_gramas) || 1000);
+        materialNome = `${materialObj.tipo} - ${materialObj.cor}`;
+    }
+
+    const custoMaterial = pesoGramas * custoGrama;
+    const consumoKwh = (cfg.potenciaWatts / 1000) * tempoHoras;
+    const custoEnergia = consumoKwh * cfg.tarifaEnergiaKwh;
+    const custoDesgaste = tempoHoras * cfg.depreciacaoHora;
+
+    const subtotalDireto = custoMaterial + custoEnergia + custoDesgaste + extrasTotal;
+    const custoRisco = subtotalDireto * taxaRisco;
+    const custoTotalProducao = subtotalDireto + custoRisco;
+
+    let precoFinal = 0;
+    let margemBadge = `${margemOpt}x Margem`;
+    if (margemOpt === 'manual') {
+        precoFinal = valorManual > 0 ? valorManual : custoTotalProducao;
+        margemBadge = 'Preço Personalizado';
+    } else {
+        const mult = parseFloat(margemOpt) || 2.5;
+        precoFinal = custoTotalProducao * mult;
+    }
+
+    const lucroLiquido = Math.max(0, precoFinal - custoTotalProducao);
+    const sinal50 = precoFinal * 0.5;
+
+    // Atualiza DOM
+    const elResMaterial = document.getElementById('orc-resumo-material');
+    if (elResMaterial) elResMaterial.textContent = formatarMoeda(custoMaterial);
+
+    const elResEnergia = document.getElementById('orc-resumo-energia');
+    if (elResEnergia) elResEnergia.textContent = formatarMoeda(custoEnergia);
+
+    const elResDesgaste = document.getElementById('orc-resumo-desgaste');
+    if (elResDesgaste) elResDesgaste.textContent = formatarMoeda(custoDesgaste);
+
+    const elResRisco = document.getElementById('orc-resumo-risco');
+    if (elResRisco) elResRisco.textContent = formatarMoeda(custoRisco);
+
+    const elResExtras = document.getElementById('orc-resumo-extras');
+    if (elResExtras) elResExtras.textContent = formatarMoeda(extrasTotal);
+
+    const elResCustoTotal = document.getElementById('orc-resumo-custo-total');
+    if (elResCustoTotal) elResCustoTotal.textContent = formatarMoeda(custoTotalProducao);
+
+    const elResPrecoFinal = document.getElementById('orc-resumo-preco-final');
+    if (elResPrecoFinal) elResPrecoFinal.textContent = formatarMoeda(precoFinal);
+
+    const elResLucro = document.getElementById('orc-resumo-lucro-liquido');
+    if (elResLucro) elResLucro.textContent = `${formatarMoeda(lucroLiquido)} (${custoTotalProducao > 0 ? ((lucroLiquido / custoTotalProducao) * 100).toFixed(0) : 0}%)`;
+
+    const elResSinal = document.getElementById('orc-resumo-sinal-50');
+    if (elResSinal) elResSinal.textContent = formatarMoeda(sinal50);
+
+    const elBadge = document.getElementById('orc-badge-margem');
+    if (elBadge) elBadge.textContent = margemBadge;
+
+    // Mensagem WhatsApp formatada
+    const msgWhatsapp = `🖨️ *ORÇAMENTO PRISMA 3D STUDIO*
+
+Olá *${clienteNome}*, segue a proposta comercial para o seu projeto:
+
+📦 *Projeto / Peça:* ${tituloProjeto}
+🧵 *Material Escolhido:* ${materialNome}
+⏳ *Prazo de Produção:* ${prazoPrometido}
+${listaExtrasDesc.length > 0 ? `🛠️ *Serviços Inclusos:* ${listaExtrasDesc.join(', ')}\n` : ''}
+💰 *Valor Total do Pedido:* ${formatarMoeda(precoFinal)}
+💳 *Condição Facilitada:* 50% de Entrada (${formatarMoeda(sinal50)}) via PIX e 50% na Retirada/Envio
+📅 *Validade desta proposta:* 7 dias corridos
+
+Ficou com alguma dúvida ou gostaria de ajustar algum detalhe? Podemos iniciar a impressão do seu projeto!`;
+
+    const elPreview = document.getElementById('orc-preview-whatsapp');
+    if (elPreview) elPreview.value = msgWhatsapp;
+
+    // Salva cálculo ativo no estado
+    window.PrismaState.orcamentoAtualCalculado = {
+        cliente_id: document.getElementById('orc-cliente-select')?.value || null,
+        cliente_nome: clienteNome,
+        cliente_whatsapp: clienteWhats,
+        titulo: tituloProjeto,
+        material_id: materialId || null,
+        material_nome: materialNome,
+        peso_gramas: pesoGramas,
+        tempo_horas: tempoHoras,
+        taxa_risco: taxaRisco,
+        extras_total: extrasTotal,
+        extras_desc: listaExtrasDesc,
+        margem_opt: margemOpt,
+        prazo_prometido: prazoPrometido,
+        custo_material: custoMaterial,
+        custo_energia: custoEnergia,
+        custo_desgaste: custoDesgaste,
+        custo_risco: custoRisco,
+        custo_total: custoTotalProducao,
+        preco_final: precoFinal,
+        lucro_liquido: lucroLiquido,
+        sinal_sugerido: sinal50,
+        mensagem_whatsapp: msgWhatsapp
+    };
+}
+
+function copiarTextoProposta() {
+    const elPreview = document.getElementById('orc-preview-whatsapp');
+    if (!elPreview || !elPreview.value) return;
+
+    navigator.clipboard.writeText(elPreview.value).then(() => {
+        mostrarToast("Proposta copiada para a área de transferência!", "success");
+    }).catch(() => {
+        elPreview.select();
+        document.execCommand('copy');
+        mostrarToast("Proposta copiada!", "success");
+    });
+}
+
+function enviarPropostaWhatsAppDireto() {
+    const orc = window.PrismaState.orcamentoAtualCalculado;
+    if (!orc) return;
+
+    let num = (orc.cliente_whatsapp || '').replace(/\D/g, '');
+    if (!num) {
+        mostrarToast("Por favor, preencha o WhatsApp do cliente para abrir o chat.", "error");
+        return;
+    }
+    if (!num.startsWith('55') && num.length <= 11) {
+        num = '55' + num;
+    }
+
+    const url = `https://wa.me/${num}?text=${encodeURIComponent(orc.mensagem_whatsapp)}`;
+    window.open(url, '_blank');
+}
+
+async function salvarOrcamento() {
+    const orc = window.PrismaState.orcamentoAtualCalculado;
+    if (!orc || !orc.titulo) {
+        mostrarToast("Preencha ao menos o nome do projeto para salvar.", "error");
+        return;
+    }
+
+    try {
+        const data = {
+            ...orc,
+            status: 'pendente',
+            created_at: serverTimestamp(),
+            updated_at: serverTimestamp()
+        };
+
+        await addDoc(collection(db, COLS.ORCAMENTOS), data);
+        mostrarToast("Orçamento salvo com sucesso no histórico!", "success");
+    } catch (err) {
+        console.error("Erro ao salvar orçamento:", err);
+        mostrarToast("Erro ao salvar orçamento no banco.", "error");
+    }
+}
+
+function converterOrcamentoEmPedido(orcId) {
+    let orc = window.PrismaState.orcamentoAtualCalculado;
+    if (orcId) {
+        orc = window.PrismaState.orcamentos.find(o => o.id === orcId) || orc;
+    }
+
+    if (!orc) {
+        mostrarToast("Nenhum cálculo selecionado.", "error");
+        return;
+    }
+
+    // Abre o modal de pedido pré-preenchido
+    abrirModalNovoPedido();
+
+    // Preenche com os dados calculados do orçamento
+    const elTitulo = document.getElementById('pedido-titulo');
+    if (elTitulo) elTitulo.value = orc.titulo || '';
+
+    const elCliente = document.getElementById('pedido-cliente');
+    if (elCliente && orc.cliente_id) elCliente.value = orc.cliente_id;
+
+    const elMaterial = document.getElementById('pedido-material');
+    if (elMaterial && orc.material_id) elMaterial.value = orc.material_id;
+
+    const elPeso = document.getElementById('pedido-peso');
+    if (elPeso) elPeso.value = orc.peso_gramas || '';
+
+    const elTempo = document.getElementById('pedido-tempo');
+    if (elTempo) elTempo.value = orc.tempo_horas || '';
+
+    const elValor = document.getElementById('pedido-valor');
+    if (elValor) elValor.value = (orc.preco_final || 0).toFixed(2);
+
+    const elSinal = document.getElementById('pedido-sinal');
+    if (elSinal) elSinal.value = (orc.sinal_sugerido || 0).toFixed(2);
+
+    const elStatus = document.getElementById('pedido-status');
+    if (elStatus) elStatus.value = 'orcamento';
+
+    const elObs = document.getElementById('pedido-obs');
+    if (elObs) {
+        elObs.value = `Orçamento gerado pelo Studio. Material: ${orc.material_nome || ''}. Prazo est.: ${orc.prazo_prometido || ''}. Custo prod.: ${formatarMoeda(orc.custo_total)}.`;
+    }
+
+    atualizarCalculoCustoModal();
+
+    if (orcId) {
+        alterarStatusOrcamento(orcId, 'aprovado');
+    }
+
+    mostrarToast("Dados do orçamento transferidos para o novo pedido!", "success");
+}
+
+async function alterarStatusOrcamento(id, novoStatus) {
+    try {
+        await updateDoc(doc(db, COLS.ORCAMENTOS, id), {
+            status: novoStatus,
+            updated_at: serverTimestamp()
+        });
+        const msg = novoStatus === 'aprovado' ? "Orçamento marcado como Aprovado!" : (novoStatus === 'recusado' ? "Orçamento marcado como Recusado." : "Status atualizado.");
+        mostrarToast(msg, "success");
+    } catch (err) {
+        console.error(err);
+        mostrarToast("Erro ao alterar status.", "error");
+    }
+}
+
+async function excluirOrcamento(id) {
+    if (confirm("Deseja realmente excluir este orçamento do histórico?")) {
+        try {
+            await deleteDoc(doc(db, COLS.ORCAMENTOS, id));
+            mostrarToast("Orçamento excluído.", "success");
+        } catch (err) {
+            console.error(err);
+            mostrarToast("Erro ao excluir orçamento.", "error");
+        }
+    }
+}
+
+function carregarOrcamentoNaCalculadora(id) {
+    const orc = window.PrismaState.orcamentos.find(o => o.id === id);
+    if (!orc) return;
+
+    if (orc.cliente_id) {
+        const elSelect = document.getElementById('orc-cliente-select');
+        if (elSelect) elSelect.value = orc.cliente_id;
+    }
+    const elNome = document.getElementById('orc-cliente-nome');
+    if (elNome) elNome.value = orc.cliente_nome || '';
+
+    const elWhats = document.getElementById('orc-cliente-whatsapp');
+    if (elWhats) elWhats.value = orc.cliente_whatsapp || '';
+
+    const elTitulo = document.getElementById('orc-titulo');
+    if (elTitulo) elTitulo.value = orc.titulo || '';
+
+    const elMat = document.getElementById('orc-material-select');
+    if (elMat && orc.material_id) elMat.value = orc.material_id;
+
+    const elPeso = document.getElementById('orc-peso');
+    if (elPeso) elPeso.value = orc.peso_gramas || 100;
+
+    const elTempo = document.getElementById('orc-tempo');
+    if (elTempo) elTempo.value = orc.tempo_horas || 5;
+
+    const elRisco = document.getElementById('orc-risco');
+    if (elRisco) elRisco.value = orc.taxa_risco !== undefined ? orc.taxa_risco.toFixed(2) : '0.10';
+
+    const elMargem = document.getElementById('orc-margem-multiplicador');
+    if (elMargem) {
+        elMargem.value = orc.margem_opt || '2.5';
+        atualizarMargemOrcamento(elMargem.value);
+    }
+
+    const elPrazo = document.getElementById('orc-prazo-dias');
+    if (elPrazo) elPrazo.value = orc.prazo_prometido || '3 a 5 dias úteis';
+
+    recalcularOrcamento();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    mostrarToast("Orçamento carregado no simulador!", "success");
+}
+
+function limparCalculadoraOrcamento() {
+    const elSelect = document.getElementById('orc-cliente-select');
+    if (elSelect) elSelect.value = '';
+
+    const elNome = document.getElementById('orc-cliente-nome');
+    if (elNome) elNome.value = '';
+
+    const elWhats = document.getElementById('orc-cliente-whatsapp');
+    if (elWhats) elWhats.value = '';
+
+    const elTitulo = document.getElementById('orc-titulo');
+    if (elTitulo) elTitulo.value = '';
+
+    const elPeso = document.getElementById('orc-peso');
+    if (elPeso) elPeso.value = '100';
+
+    const elTempo = document.getElementById('orc-tempo');
+    if (elTempo) elTempo.value = '5.0';
+
+    const chks = ['orc-extra-suporte', 'orc-extra-lixamento', 'orc-extra-inserts', 'orc-extra-embalagem'];
+    chks.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.checked = false;
+    });
+
+    const elMargem = document.getElementById('orc-margem-multiplicador');
+    if (elMargem) {
+        elMargem.value = '2.5';
+        atualizarMargemOrcamento('2.5');
+    }
+
+    recalcularOrcamento();
+    mostrarToast("Simulador reiniciado.", "success");
+}
+
+function filtrarOrcamentosPorStatus(status) {
+    window.PrismaState.filtroStatusOrcamento = status;
+    document.querySelectorAll('[data-status-orc]').forEach(btn => {
+        if (btn.getAttribute('data-status-orc') === status) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    renderizarTabelaOrcamentos();
+}
+
+function renderizarTabelaOrcamentos() {
+    const tbody = document.getElementById('tabela-orcamentos');
+    if (!tbody) return;
+
+    const orcamentos = window.PrismaState.orcamentos || [];
+    const filtro = window.PrismaState.filtroStatusOrcamento || 'todos';
+
+    // Contadores
+    const elTodos = document.getElementById('orc-cont-todos');
+    const elPend = document.getElementById('orc-cont-pendentes');
+    const elAprov = document.getElementById('orc-cont-aprovados');
+    const elRecus = document.getElementById('orc-cont-recusados');
+
+    if (elTodos) elTodos.textContent = orcamentos.length;
+    if (elPend) elPend.textContent = orcamentos.filter(o => o.status === 'pendente').length;
+    if (elAprov) elAprov.textContent = orcamentos.filter(o => o.status === 'aprovado').length;
+    if (elRecus) elRecus.textContent = orcamentos.filter(o => o.status === 'recusado').length;
+
+    let lista = orcamentos;
+    if (filtro !== 'todos') {
+        lista = orcamentos.filter(o => o.status === filtro);
+    }
+
+    lista.sort((a, b) => {
+        const dataA = a.created_at?.seconds || 0;
+        const dataB = b.created_at?.seconds || 0;
+        return dataB - dataA;
+    });
+
+    if (lista.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">
+                    Nenhum orçamento encontrado nesta categoria.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = lista.map(o => {
+        const dataStr = formatarDataTimestamp(o.created_at);
+        const statusMap = {
+            'pendente': { label: 'Em Aberto', cor: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)' },
+            'aprovado': { label: 'Aprovado', cor: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' },
+            'recusado': { label: 'Recusado', cor: '#ef4444', bg: 'rgba(239, 68, 68, 0.12)' }
+        };
+        const st = statusMap[o.status] || statusMap.pendente;
+
+        return `
+            <tr>
+                <td style="font-size: 0.8rem; color: var(--text-dim);">${dataStr}</td>
+                <td>
+                    <strong style="color: #ffffff; font-size: 0.9rem;">${escapeHtml(o.titulo)}</strong>
+                    <div style="font-size: 0.74rem; color: var(--text-dim);">Prazo: ${escapeHtml(o.prazo_prometido || '-')}</div>
+                </td>
+                <td>
+                    <div style="font-weight: 500; color: #cbd5e1;">${escapeHtml(o.cliente_nome || '-')}</div>
+                    ${o.cliente_whatsapp ? `<span style="font-size: 0.74rem; color: #10b981;"><i class="fa-brands fa-whatsapp"></i> ${escapeHtml(o.cliente_whatsapp)}</span>` : ''}
+                </td>
+                <td>
+                    <span style="font-size: 0.82rem; color: var(--text-muted);">${escapeHtml(o.material_nome || '-')}</span>
+                    <div style="font-size: 0.74rem; color: var(--text-dim);">${o.peso_gramas || 0}g · ${o.tempo_horas || 0}h</div>
+                </td>
+                <td style="color: #fca5a5; font-size: 0.88rem;">${formatarMoeda(o.custo_total)}</td>
+                <td style="color: var(--primary); font-weight: 700; font-size: 0.95rem;">${formatarMoeda(o.preco_final)}</td>
+                <td style="color: #10b981; font-weight: 600; font-size: 0.88rem;">${formatarMoeda(o.lucro_liquido)}</td>
+                <td>
+                    <span style="display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; color: ${st.cor}; background: ${st.bg};">
+                        ${st.label}
+                    </span>
+                </td>
+                <td style="text-align: right;">
+                    <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                        <button class="btn-icon" title="Carregar no Simulador" onclick="window.PrismaApp.carregarOrcamentoNaCalculadora('${o.id}')">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        </button>
+                        ${o.status === 'pendente' ? `
+                            <button class="btn-icon" style="color: #10b981;" title="Aprovar e Criar Pedido" onclick="window.PrismaApp.converterOrcamentoEmPedido('${o.id}')">
+                                <i class="fa-solid fa-check"></i>
+                            </button>
+                            <button class="btn-icon" style="color: #ef4444;" title="Marcar como Recusado" onclick="window.PrismaApp.alterarStatusOrcamento('${o.id}', 'recusado')">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        ` : ''}
+                        <button class="btn-icon" style="color: #f87171;" title="Excluir" onclick="window.PrismaApp.excluirOrcamento('${o.id}')">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// ==========================================================================
 // HELPERS, DROPDOWNS E FORMATAÇÃO
 // ==========================================================================
 function atualizarSelectsClientes() {
@@ -1499,5 +2093,19 @@ window.PrismaApp = {
     excluirNota,
     toggleFixarNota,
     filtrarNotasPorCategoria,
-    filtrarNotasPorBusca
+    filtrarNotasPorBusca,
+    abrirConfigOficina,
+    salvarConfigOficina,
+    selecionarClienteOrcamento,
+    atualizarMargemOrcamento,
+    recalcularOrcamento,
+    copiarTextoProposta,
+    enviarPropostaWhatsAppDireto,
+    salvarOrcamento,
+    converterOrcamentoEmPedido,
+    alterarStatusOrcamento,
+    excluirOrcamento,
+    carregarOrcamentoNaCalculadora,
+    limparCalculadoraOrcamento,
+    filtrarOrcamentosPorStatus
 };

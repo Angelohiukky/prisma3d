@@ -39,7 +39,15 @@ Sistema web moderno, responsivo e seguro desenvolvido sob medida para a **Prisma
    - Busca em tempo real e filtros por categoria (*Parâmetros 3D*, *Manutenção*, *Ideias*, *Urgente*, *Geral*).
    - Widget integrado diretamente na Visão Geral para visualização rápida.
 
-6. **Segurança com Senha & Nuvem Realtime**:
+6. **Calculadora Profissional de Orçamentos 3D**:
+   - Cálculo automático de **4 blocos de custo**: filamento/resina, energia elétrica, desgaste de máquina e risco de falha.
+   - **Parâmetros da oficina configuráveis**: tarifa de kWh, potência da impressora, depreciação/hora e margem padrão.
+   - Serviços extras com checkboxes: remoção de suportes, lixamento & primer, inserts metálicos, embalagem Sedex.
+   - **Proposta comercial pronta para WhatsApp** gerada automaticamente — copie ou abra direto no chat do cliente.
+   - **Converter em Pedido com 1 clique**: aprove o orçamento e o sistema preenche todo o Kanban automaticamente.
+   - **Histórico completo** de orçamentos com filtros por status (*Em Aberto*, *Aprovado*, *Recusado*) e taxa de conversão.
+
+7. **Segurança com Senha & Nuvem Realtime**:
    - Protegido por **Firebase Auth** (Login com e-mail e senha).
    - Banco de dados em tempo real no **Firebase Firestore** (gratuito perpétuo).
 
@@ -92,7 +100,8 @@ Prisma/
 │   │   ├── clientes.html     # CRM de clientes e endereços de entrega
 │   │   ├── insumos.html      # Bobinas, estoque e calculadora de fatiador
 │   │   ├── financeiro.html   # Fluxo de pagamentos e lucro líquido
-│   │   └── mural.html        # Mural de notas, parâmetros e recados da oficina
+│   │   ├── mural.html        # Mural de notas, parâmetros e recados da oficina
+│   │   └── orcamentos.html   # Calculadora de orçamentos 3D com proposta WhatsApp
 │   └── assets/
 │       └── logo.svg          # Logo oficial Prisma 3D Studio
 ├── server.js                 # Servidor local de desenvolvimento sem dependências

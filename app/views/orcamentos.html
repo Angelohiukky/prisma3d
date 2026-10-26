@@ -1,0 +1,282 @@
+<div class="header-view">
+    <div class="header-text">
+        <h2><i class="fa-solid fa-calculator" style="color: var(--primary);"></i> Calculadora de Orçamentos 3D</h2>
+        <p>Calcule o custo real de impressão, margem de lucro líquida e envie propostas comerciais em segundos.</p>
+    </div>
+    <div class="header-actions">
+        <button class="btn-secondary" onclick="window.PrismaApp.abrirConfigOficina()">
+            <i class="fa-solid fa-sliders"></i> Parâmetros da Oficina
+        </button>
+        <button class="btn-cta" onclick="window.PrismaApp.limparCalculadoraOrcamento()">
+            <i class="fa-solid fa-rotate-right"></i> Novo Cálculo
+        </button>
+    </div>
+</div>
+
+<!-- ==========================================================================
+     SIMULADOR DE ORÇAMENTOS (GRID EM 2 COLUNAS)
+     ========================================================================== -->
+<div class="orcamento-calc-container" style="display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 1.5rem; margin-bottom: 2.5rem; align-items: start;">
+    
+    <!-- COLUNA 1: ENTRADA DE PARÂMETROS TÉCNICOS & SERVIÇOS -->
+    <div class="glass-panel" style="padding: 1.5rem;">
+        <h3 style="font-size: 1.05rem; color: #ffffff; display: flex; align-items: center; gap: 8px; margin-bottom: 1.25rem;">
+            <i class="fa-solid fa-cube" style="color: var(--primary);"></i>
+            1. Dados do Projeto &amp; Fatiador
+        </h3>
+
+        <!-- Cliente Associado -->
+        <div class="form-grid-2">
+            <div class="form-group">
+                <label>Cliente Cadastrado</label>
+                <select id="orc-cliente-select" onchange="window.PrismaApp.selecionarClienteOrcamento(this.value)">
+                    <option value="">-- Selecione ou digite ao lado --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Nome do Cliente / WhatsApp *</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <input type="text" id="orc-cliente-nome" placeholder="Ex: Lucas Mendes" oninput="window.PrismaApp.recalcularOrcamento()">
+                    <input type="tel" id="orc-cliente-whatsapp" placeholder="DDD + Número" oninput="window.PrismaApp.recalcularOrcamento()">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Nome do Projeto / Peça 3D *</label>
+            <input type="text" id="orc-titulo" placeholder="Ex: Action Figure Cyberpunk 22cm + Base" oninput="window.PrismaApp.recalcularOrcamento()">
+        </div>
+
+        <!-- Material e Fatiador -->
+        <div class="form-grid-2">
+            <div class="form-group">
+                <label>Material / Filamento *</label>
+                <select id="orc-material-select" onchange="window.PrismaApp.recalcularOrcamento()">
+                    <option value="">Selecione o filamento...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Risco / Complexidade da Peça</label>
+                <select id="orc-risco" onchange="window.PrismaApp.recalcularOrcamento()">
+                    <option value="0.00">Baixa (Peça plana / sem suportes) - +0%</option>
+                    <option value="0.10" selected>Média (Geometria padrão / suportes) - +10%</option>
+                    <option value="0.20">Alta (Peça oca / parede fina / arriscada) - +20%</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-grid-2">
+            <div class="form-group">
+                <label>Peso do Fatiador (Gramas) *</label>
+                <input type="number" id="orc-peso" placeholder="Ex: 145" min="1" step="0.1" value="100" oninput="window.PrismaApp.recalcularOrcamento()">
+            </div>
+            <div class="form-group">
+                <label>Tempo Estimado Máquina (Horas) *</label>
+                <input type="number" id="orc-tempo" placeholder="Ex: 6.5" min="0.1" step="0.1" value="5.0" oninput="window.PrismaApp.recalcularOrcamento()">
+            </div>
+        </div>
+
+        <!-- Serviços Adicionais & Pós-Processamento -->
+        <div style="background: rgba(0, 0, 0, 0.22); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem; margin-top: 0.5rem; margin-bottom: 1.25rem;">
+            <span style="font-size: 0.8rem; font-weight: 600; color: #a855f7; display: flex; align-items: center; gap: 6px; margin-bottom: 0.75rem;">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Serviços Adicionais &amp; Acabamento
+            </span>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: #cbd5e1; cursor: pointer;">
+                    <input type="checkbox" id="orc-extra-suporte" onchange="window.PrismaApp.recalcularOrcamento()" style="accent-color: var(--primary);">
+                    <span>Remoção Suportes / Limpeza (+R$ 15)</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: #cbd5e1; cursor: pointer;">
+                    <input type="checkbox" id="orc-extra-lixamento" onchange="window.PrismaApp.recalcularOrcamento()" style="accent-color: var(--primary);">
+                    <span>Lixamento / Primer (+R$ 35)</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: #cbd5e1; cursor: pointer;">
+                    <input type="checkbox" id="orc-extra-inserts" onchange="window.PrismaApp.recalcularOrcamento()" style="accent-color: var(--primary);">
+                    <span>Inserts Roscados / Ímãs (+R$ 12)</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: #cbd5e1; cursor: pointer;">
+                    <input type="checkbox" id="orc-extra-embalagem" onchange="window.PrismaApp.recalcularOrcamento()" style="accent-color: var(--primary);">
+                    <span>Embalagem Especial Sedex (+R$ 10)</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Margem e Condições -->
+        <div class="form-grid-2">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Margem Comercial Sugerida</label>
+                <select id="orc-margem-multiplicador" onchange="window.PrismaApp.atualizarMargemOrcamento(this.value)">
+                    <option value="1.8">1.8x (Econômico / Amigo)</option>
+                    <option value="2.5" selected>2.5x (Padrão Prisma 3D)</option>
+                    <option value="3.0">3.0x (Padrão Mercado 3D)</option>
+                    <option value="3.5">3.5x (Alta Complexidade)</option>
+                    <option value="manual">Personalizado (Digitar valor final)</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Prazo de Produção Prometido</label>
+                <input type="text" id="orc-prazo-dias" placeholder="Ex: 3 a 5 dias úteis" value="3 a 5 dias úteis" oninput="window.PrismaApp.recalcularOrcamento()">
+            </div>
+        </div>
+
+        <div id="orc-campo-valor-manual" class="form-group" style="display: none; margin-top: 1rem; margin-bottom: 0;">
+            <label>Preço Final Personalizado Cobrado (R$)</label>
+            <input type="number" id="orc-valor-manual" placeholder="Ex: 120.00" step="0.01" min="0" oninput="window.PrismaApp.recalcularOrcamento()">
+        </div>
+    </div>
+
+    <!-- COLUNA 2: DETALHAMENTO DE CUSTOS & PROPOSTA COMERCIAL -->
+    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+        
+        <!-- CARD DE RESUMO FINANCEIRO -->
+        <div class="glass-panel" style="padding: 1.5rem; border-color: var(--border-highlight); background: linear-gradient(180deg, rgba(15, 23, 42, 0.85) 0%, rgba(11, 19, 36, 0.95) 100%);">
+            <h3 style="font-size: 1rem; color: #ffffff; display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.15rem;">
+                <span style="display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-coins" style="color: #f59e0b;"></i>
+                    2. Composição de Custos Reais
+                </span>
+                <span id="orc-badge-margem" style="font-size: 0.72rem; padding: 3px 8px; border-radius: 4px; background: rgba(6, 182, 212, 0.15); color: var(--primary); font-weight: 600;">
+                    2.5x Margem
+                </span>
+            </h3>
+
+            <!-- Tabela detalhada de custos técnicos -->
+            <div style="font-size: 0.84rem; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; color: var(--text-muted);">
+                    <span>🧵 Custo do Filamento / Resina:</span>
+                    <strong id="orc-resumo-material" style="color: #f8fafc;">R$ 0,00</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; color: var(--text-muted);">
+                    <span>⚡ Consumo de Energia Elétrica:</span>
+                    <strong id="orc-resumo-energia" style="color: #f8fafc;">R$ 0,00</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; color: var(--text-muted);">
+                    <span>⚙️ Desgaste &amp; Depreciação Máquina:</span>
+                    <strong id="orc-resumo-desgaste" style="color: #f8fafc;">R$ 0,00</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; color: var(--text-muted);">
+                    <span>🛡️ Risco de Falha / Tolerância:</span>
+                    <strong id="orc-resumo-risco" style="color: #f8fafc;">R$ 0,00</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; color: var(--text-muted);">
+                    <span>🛠️ Acabamentos &amp; Extras:</span>
+                    <strong id="orc-resumo-extras" style="color: #f8fafc;">R$ 0,00</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding-top: 6px; border-top: 1px dashed rgba(255, 255, 255, 0.08); font-weight: 600;">
+                    <span style="color: #fca5a5;">Custo Total de Produção:</span>
+                    <span id="orc-resumo-custo-total" style="color: #ef4444; font-size: 0.95rem;">R$ 0,00</span>
+                </div>
+            </div>
+
+            <!-- RESULTADO COMERCIAL: PREÇO FINAL & LUCRO -->
+            <div style="background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: var(--radius-md); padding: 1.15rem; margin-bottom: 1.15rem; text-align: center;">
+                <span style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--primary); font-weight: 700; display: block; margin-bottom: 4px;">
+                    Preço Final Sugerido ao Cliente
+                </span>
+                <div id="orc-resumo-preco-final" style="font-size: 2.1rem; font-weight: 800; color: #ffffff; font-family: 'Syne', sans-serif; text-shadow: 0 0 16px var(--primary-glow);">
+                    R$ 0,00
+                </div>
+                <div style="display: flex; justify-content: center; gap: 1.5rem; margin-top: 8px; font-size: 0.8rem;">
+                    <div>
+                        <span style="color: var(--text-dim);">Lucro Líquido Real:</span>
+                        <strong id="orc-resumo-lucro-liquido" style="color: #10b981; display: block; font-size: 0.95rem;">R$ 0,00</strong>
+                    </div>
+                    <div>
+                        <span style="color: var(--text-dim);">Entrada Sinal (50%):</span>
+                        <strong id="orc-resumo-sinal-50" style="color: #38bdf8; display: block; font-size: 0.95rem;">R$ 0,00</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PREVIEW DA MENSAGEM DO WHATSAPP -->
+            <div style="margin-bottom: 1.25rem;">
+                <label style="font-size: 0.75rem; color: var(--text-muted); display: flex; justify-content: space-between; margin-bottom: 6px;">
+                    <span><i class="fa-brands fa-whatsapp" style="color: #10b981;"></i> Proposta Pronta para WhatsApp:</span>
+                    <a href="javascript:void(0)" onclick="window.PrismaApp.copiarTextoProposta()" style="color: var(--primary); text-decoration: none; font-size: 0.75rem;">
+                        <i class="fa-regular fa-copy"></i> Copiar Texto
+                    </a>
+                </label>
+                <textarea id="orc-preview-whatsapp" rows="6" readonly style="width: 100%; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border); border-radius: var(--radius-sm); color: #cbd5e1; font-size: 0.78rem; font-family: monospace; padding: 10px; resize: none;"></textarea>
+            </div>
+
+            <!-- BOTÕES DE AÇÃO -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                <button type="button" class="btn-secondary" onclick="window.PrismaApp.copiarTextoProposta()" style="justify-content: center;">
+                    <i class="fa-regular fa-copy"></i> Copiar Proposta
+                </button>
+                <button type="button" class="btn-secondary" onclick="window.PrismaApp.enviarPropostaWhatsAppDireto()" style="justify-content: center; color: #10b981; border-color: rgba(16, 185, 129, 0.3);">
+                    <i class="fa-brands fa-whatsapp"></i> Abrir WhatsApp
+                </button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <button type="button" class="btn-secondary" onclick="window.PrismaApp.salvarOrcamento()" style="justify-content: center;">
+                    <i class="fa-regular fa-floppy-disk"></i> Salvar Orçamento
+                </button>
+                <button type="button" class="btn-cta" onclick="window.PrismaApp.converterOrcamentoEmPedido()" style="justify-content: center;">
+                    <i class="fa-solid fa-cube"></i> Criar Pedido
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ==========================================================================
+     HISTÓRICO E GESTÃO DE ORÇAMENTOS SALVOS
+     ========================================================================== -->
+<div class="glass-panel">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h3 style="font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-folder-open" style="color: var(--primary);"></i>
+                Histórico de Orçamentos
+            </h3>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">
+                Acompanhe o status das propostas emitidas, taxa de conversão e reabra qualquer cálculo com 1 clique.
+            </p>
+        </div>
+
+        <!-- Filtros por Status -->
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <button class="mural-pill-filtro active" data-status-orc="todos" onclick="window.PrismaApp.filtrarOrcamentosPorStatus('todos')">
+                Todos (<span id="orc-cont-todos">0</span>)
+            </button>
+            <button class="mural-pill-filtro" data-status-orc="pendente" onclick="window.PrismaApp.filtrarOrcamentosPorStatus('pendente')">
+                ⏳ Em Aberto (<span id="orc-cont-pendentes">0</span>)
+            </button>
+            <button class="mural-pill-filtro" data-status-orc="aprovado" onclick="window.PrismaApp.filtrarOrcamentosPorStatus('aprovado')">
+                ✅ Aprovados (<span id="orc-cont-aprovados">0</span>)
+            </button>
+            <button class="mural-pill-filtro" data-status-orc="recusado" onclick="window.PrismaApp.filtrarOrcamentosPorStatus('recusado')">
+                ❌ Recusados (<span id="orc-cont-recusados">0</span>)
+            </button>
+        </div>
+    </div>
+
+    <!-- Tabela Responsiva de Orçamentos -->
+    <div class="table-responsive">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Projeto / Peça</th>
+                    <th>Cliente</th>
+                    <th>Material &amp; Fatiador</th>
+                    <th>Custo Prod.</th>
+                    <th>Preço Proposto</th>
+                    <th>Lucro Estimado</th>
+                    <th>Status</th>
+                    <th style="text-align: right;">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-orcamentos">
+                <tr>
+                    <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                        Nenhum orçamento salvo ainda. Use o simulador acima para gerar seu primeiro cálculo!
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

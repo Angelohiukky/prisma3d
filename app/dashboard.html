@@ -37,6 +37,10 @@
                 <i class="fa-solid fa-layer-group"></i>
                 <span>Produção &amp; Prazos</span>
             </a>
+            <a href="#" class="nav-link" data-view="orcamentos" onclick="window.PrismaApp.navegarPara('orcamentos')">
+                <i class="fa-solid fa-calculator"></i>
+                <span>Orçamentos 3D</span>
+            </a>
             <a href="#" class="nav-link" data-view="clientes" onclick="window.PrismaApp.navegarPara('clientes')">
                 <i class="fa-solid fa-users"></i>
                 <span>Clientes &amp; Frete</span>
@@ -419,6 +423,67 @@
                 <div class="modal-footer">
                     <button type="button" class="btn-secondary" onclick="window.PrismaApp.fecharModal('modal-nota')">Cancelar</button>
                     <button type="submit" class="btn-cta" id="btn-salvar-nota">Salvar Nota</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+         MODAL: PARÂMETROS & CUSTOS DA OFICINA (BASE DE CÁLCULO)
+         ========================================================================== -->
+    <div class="modal-overlay" id="modal-config-oficina">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-sliders" style="color: var(--primary);"></i> Parâmetros de Custos da Oficina</h3>
+                <button class="btn-icon" onclick="window.PrismaApp.fecharModal('modal-config-oficina')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form id="form-config-oficina" onsubmit="window.PrismaApp.salvarConfigOficina(event)">
+                <div class="modal-body">
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+                        Esses parâmetros alimentam o cálculo automático de energia, desgaste de bicos/correias e mão de obra em todos os seus orçamentos.
+                    </p>
+
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label>Tarifa de Energia (R$ / kWh) *</label>
+                            <input type="number" id="cfg-tarifa-energia" step="0.01" min="0" placeholder="Ex: 0.95" required>
+                            <span style="font-size: 0.72rem; color: var(--text-dim);">Consulte na sua conta de luz (média Brasil: R$ 0,85 a 1,10)</span>
+                        </div>
+                        <div class="form-group">
+                            <label>Potência Média da Impressora (Watts) *</label>
+                            <input type="number" id="cfg-potencia-watts" step="1" min="10" placeholder="Ex: 180" required>
+                            <span style="font-size: 0.72rem; color: var(--text-dim);">Ender 3/Bambu Lab consomem cerca de 150W a 250W</span>
+                        </div>
+                    </div>
+
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label>Depreciação &amp; Manutenção (R$ / hora) *</label>
+                            <input type="number" id="cfg-depreciacao-hora" step="0.10" min="0" placeholder="Ex: 2.50" required>
+                            <span style="font-size: 0.72rem; color: var(--text-dim);">Cobre desgaste de bico, correias, mesa PEI e graxas</span>
+                        </div>
+                        <div class="form-group">
+                            <label>Hora de Mão de Obra (R$ / hora) *</label>
+                            <input type="number" id="cfg-mao-obra-hora" step="1" min="0" placeholder="Ex: 30.00" required>
+                            <span style="font-size: 0.72rem; color: var(--text-dim);">Valor da sua hora técnica para pós-processo / fatiamento</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Multiplicador de Margem Padrão</label>
+                        <select id="cfg-margem-padrao">
+                            <option value="2.0">2.0x (100% de Lucro / Peças Simples)</option>
+                            <option value="2.5" selected>2.5x (Recomendado Prisma 3D)</option>
+                            <option value="3.0">3.0x (Padrão de Mercado 3D)</option>
+                            <option value="3.5">3.5x (Peças Complexas / Alta Precisão)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="window.PrismaApp.fecharModal('modal-config-oficina')">Cancelar</button>
+                    <button type="submit" class="btn-cta">Salvar Parâmetros</button>
                 </div>
             </form>
         </div>
